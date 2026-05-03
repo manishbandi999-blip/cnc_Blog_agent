@@ -1,0 +1,32 @@
+name: CNC Daily Blog Agent
+
+on:
+  schedule:
+    # Runs at 10:00 AM UTC = 3:30 PM IST every day
+    - cron: '0 10 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  publish-blog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install node-fetch
+
+      - name: Run CNC Blog Agent
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          IDEOGRAM_API_KEY: ${{ secrets.IDEOGRAM_API_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          BLOG_API_SECRET: ${{ secrets.BLOG_API_SECRET }}
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: node cnc-blog-agent.js
