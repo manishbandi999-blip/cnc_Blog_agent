@@ -296,8 +296,8 @@ async function main() {
     const { slugs, titles } = await getExistingSlugs();
     const topicsText = await researchTopics(titles);
 
-    console.log("⏳ Waiting 90 seconds (rate limit safety)...");
-    await sleep(90000);
+    console.log("⏳ Waiting 3 minutes (rate limit safety)...");
+    await sleep(180000);
 
     const blog = await writeBlog(topicsText, titles);
     const blogUrl = `https://www.unimakeworks.com/blog/${blog.slug}`;
