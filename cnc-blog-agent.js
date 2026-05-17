@@ -404,7 +404,7 @@ Return ONLY a valid JSON object with these exact fields:
   "thumbnail_prompt": "maximum 5 words visual description of blog topic"
 }
 
-Return JSON only. No markdown. No extra text.`;
+CRITICAL: Start your response with { directly. End with }. No introduction text before {. No markdown. No backticks. JSON only.`;
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -423,7 +423,10 @@ Return JSON only. No markdown. No extra text.`;
 
   let text = textBlock.text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   const start = text.indexOf("{"); const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("No JSON in Claude response");
+  if (start === -1 || end === -1) {
+  console.log("Claude raw response:", text.substring(0, 800));
+  throw new Error("No JSON in Claude response");
+}
   const blog = JSON.parse(text.substring(start, end + 1));
   blog.slug = `${blog.slug}-${timestamp}`;
 
