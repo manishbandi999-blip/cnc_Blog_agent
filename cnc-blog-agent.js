@@ -1,12 +1,12 @@
 // CNC BLOG AGENT — Unimake Works
-// Buyer Intent Topics + Problem→Solution Format + International Focus
+// Research → Write → Thumbnail → Publish
+// Buyer Intent Topics + Problem→Solution Format
 
 const CLAUDE_API_KEY     = process.env.CLAUDE_API_KEY;
 const IDEOGRAM_API_KEY   = process.env.IDEOGRAM_API_KEY;
 const SUPABASE_ANON_KEY  = process.env.SUPABASE_ANON_KEY;
 const BLOG_API_SECRET    = process.env.BLOG_API_SECRET;
 const VERCEL_DEPLOY_HOOK = process.env.VERCEL_DEPLOY_HOOK;
-const MAKE_WEBHOOK_URL   = process.env.MAKE_WEBHOOK_URL;
 
 const SUPABASE_URL      = "https://onttzurgwjhgyboxcpmy.supabase.co";
 const BLOG_API_URL      = `${SUPABASE_URL}/functions/v1/create-blog`;
@@ -39,12 +39,6 @@ const THUMBNAIL_STYLES = [
   "macro close-up CNC machined metal parts, studio lighting, quality finish"
 ];
 
-const LINKEDIN_STYLES = [
-  "professional LinkedIn banner, navy blue, bold white text, orange accents, CNC India",
-  "corporate banner, steel grey and white, precision engineering headline, India export",
-  "industrial banner, metallic texture, orange black scheme, Hyderabad manufacturing"
-];
-
 // ============================================================
 // STEP 1 — Get existing blogs
 // ============================================================
@@ -52,9 +46,10 @@ async function getExistingSlugs() {
   console.log("📋 Fetching existing blogs...");
   try {
     const fetch = (await import("node-fetch")).default;
-    const res = await fetch(`${SUPABASE_REST_URL}?select=slug,title&status=eq.published&order=created_at.desc&limit=20`, {
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-    });
+    const res = await fetch(
+      `${SUPABASE_REST_URL}?select=slug,title&status=eq.published&order=created_at.desc&limit=20`,
+      { headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
     const data = await res.json();
     if (!Array.isArray(data)) return { slugs: [], titles: [] };
     console.log(`📊 Found ${data.length} existing blogs`);
@@ -75,7 +70,9 @@ async function researchTopics(existingTitles) {
   const day = today.getDay();
   const category = DAY_CATEGORIES[day];
   const dayName = DAY_NAMES[day];
-  const existing = existingTitles.length > 0 ? `\nAvoid these already published topics:\n${existingTitles.slice(0,10).join("\n")}` : "";
+  const existing = existingTitles.length > 0
+    ? `\nAvoid these already published topics:\n${existingTitles.slice(0,10).join("\n")}`
+    : "";
 
   const prompt = `Today is ${dayName}. Category: ${category}
 
@@ -85,7 +82,7 @@ ${existing}
 
 Return 3 unique blog topic ideas. Each must:
 1. Match actual buyer search queries
-2. Have not been covered in existing blogs above  
+2. Not be covered in existing blogs above
 3. Target international buyers outside India
 4. Lead to Unimake Works as the solution
 
@@ -120,7 +117,9 @@ async function writeBlog(topicsText, existingTitles) {
   const today = new Date();
   const dateSlug = today.toISOString().slice(0,10);
   const timestamp = today.getTime();
-  const existing = existingTitles.length > 0 ? `Do not repeat: ${existingTitles.slice(0,8).join(", ")}` : "";
+  const existing = existingTitles.length > 0
+    ? `Do not repeat: ${existingTitles.slice(0,8).join(", ")}`
+    : "";
 
   const prompt = `You are Manish Bandi, Founder of Unimake Works, Hyderabad India.
 10+ years CNC machining experience. ISO 9001:2015 certified.
@@ -139,19 +138,19 @@ STRICT RULES:
 - Simple English. Short paragraphs (3-4 lines max).
 - Every technical term must have bracket explanation.
   Example: "VMC (Vertical Machining Centre — CNC machine that cuts metal vertically)"
-  Example: "Tolerance (±0.01mm — how much size variation is allowed)"
+  Example: "Tolerance (plus or minus 0.01mm — how much size variation is allowed)"
   Example: "Ra value (surface roughness — Ra 0.8 is very smooth, Ra 3.2 is standard)"
+  Example: "GD&T (Geometric Dimensioning and Tolerancing — international standard for measurements)"
 - Add real practical examples throughout.
   Example: "For example, a Saudi oil company ordering valve bodies needs..."
 - Structure: Problem Hook → Explanation → Technical Content → Comparison Table → Unimake Solution → CTA
-- Mention Unimake Works 3-4 times naturally. Mention ISO 9001:2015, 60+ machines, Hyderabad India, 6-hour quote response.
+- Mention Unimake Works 3-4 times naturally.
+- Always mention: ISO 9001:2015, 60+ machines, Hyderabad India, 6-hour quote response.
 - End with CTA: website quote form, email, WhatsApp.
-- HEADING: for H2 sections. SUBHEADING: for H3. No HTML tags in content.
+- Use HEADING: for H2 sections. Use SUBHEADING: for H3. No HTML tags in content.
 
-Pick the best topic and write the blog now.
-
-Respond with ONLY this JSON object (start with { end with }):
-{"title":"...","slug":"keyword-slug-${dateSlug}","meta_title":"under 60 chars","meta_description":"under 155 chars","content":"full blog text with HEADING: and SUBHEADING: markers","tags":["tag1","tag2","tag3","tag4","tag5"],"thumbnail_prompt":"5 words max visual description"}`;
+Respond with ONLY this JSON object. Start with { and end with }. No text before or after:
+{"title":"...","slug":"keyword-slug-${dateSlug}","meta_title":"under 60 chars","meta_description":"under 155 chars","content":"full blog text","tags":["tag1","tag2","tag3","tag4","tag5"],"thumbnail_prompt":"5 words max"}`;
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -165,15 +164,15 @@ Respond with ONLY this JSON object (start with { end with }):
   const data = await response.json();
   if (!response.ok) throw new Error(`Blog write error: ${JSON.stringify(data)}`);
   const block = data.content.filter(c => c.type === "text").pop();
-  if (!block) throw new Error("No blog response");
+  if (!block) throw new Error("No blog response from Claude");
 
   let text = block.text.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
-  console.log("Claude response preview:", text.substring(0,100));
+  console.log("Claude preview:", text.substring(0,150));
 
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1) {
-    console.log("Full Claude response:", text);
+    console.log("Full response:", text);
     throw new Error("No JSON found in Claude response");
   }
 
@@ -199,73 +198,30 @@ Respond with ONLY this JSON object (start with { end with }):
 }
 
 // ============================================================
-// STEP 4 — Blog thumbnail
+// STEP 4 — Generate thumbnail
 // ============================================================
 async function generateThumbnail(blog) {
-  console.log("🖼️ Generating blog thumbnail...");
+  console.log("🖼️ Generating thumbnail...");
   const fetch = (await import("node-fetch")).default;
   const style = THUMBNAIL_STYLES[new Date().getDay() % 3];
   const res = await fetch("https://api.ideogram.ai/generate", {
     method: "POST",
     headers: { "Api-Key": IDEOGRAM_API_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ image_request: { prompt: `${blog.thumbnail_prompt}, ${style}, 1200x630px professional`, aspect_ratio: "ASPECT_16_9", model: "V_2", magic_prompt_option: "AUTO" } })
+    body: JSON.stringify({
+      image_request: {
+        prompt: `${blog.thumbnail_prompt}, ${style}, 1200x630px professional`,
+        aspect_ratio: "ASPECT_16_9", model: "V_2", magic_prompt_option: "AUTO"
+      }
+    })
   });
   const data = await res.json();
   if (!res.ok) throw new Error(`Ideogram error: ${JSON.stringify(data)}`);
-  console.log("✅ Blog thumbnail done");
+  console.log("✅ Thumbnail generated");
   return data.data[0].url;
 }
 
 // ============================================================
-// STEP 5 — LinkedIn thumbnail
-// ============================================================
-async function generateLinkedInThumbnail(blog) {
-  console.log("🖼️ Generating LinkedIn thumbnail...");
-  const fetch = (await import("node-fetch")).default;
-  const style = LINKEDIN_STYLES[new Date().getDay() % 3];
-  const res = await fetch("https://api.ideogram.ai/generate", {
-    method: "POST",
-    headers: { "Api-Key": IDEOGRAM_API_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ image_request: { prompt: `${blog.thumbnail_prompt}, ${style}, LinkedIn banner 1200x627px`, aspect_ratio: "ASPECT_16_9", model: "V_2", magic_prompt_option: "AUTO" } })
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`Ideogram LinkedIn error: ${JSON.stringify(data)}`);
-  console.log("✅ LinkedIn thumbnail done");
-  return data.data[0].url;
-}
-
-// ============================================================
-// STEP 6 — LinkedIn caption
-// ============================================================
-async function writeLinkedInCaption(blog, blogUrl) {
-  console.log("✍️ Writing LinkedIn caption...");
-  const fetch = (await import("node-fetch")).default;
-  const prompt = `You are Manish Bandi, Founder of Unimake Works, Hyderabad India.
-Write a LinkedIn post for international CNC buyers.
-
-Blog: ${blog.title}
-URL: ${blogUrl}
-Summary: ${blog.meta_description}
-
-Rules: Hook opening → 3 short paragraphs → 3 bullet insights → CTA with URL → 5 hashtags
-Mention Unimake Works, ISO 9001, 60+ machines, Hyderabad India naturally.
-Max 180 words. Expert tone, not salesy.
-Return post text only.`;
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": CLAUDE_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 400, messages: [{ role: "user", content: prompt }] })
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`LinkedIn caption error: ${JSON.stringify(data)}`);
-  const block = data.content.filter(c => c.type === "text").pop();
-  console.log("✅ LinkedIn caption done");
-  return block.text.trim();
-}
-
-// ============================================================
-// STEP 7 — Publish to Supabase
+// STEP 5 — Publish to Supabase
 // ============================================================
 async function publishBlog(blog, thumbnailUrl) {
   console.log("📤 Publishing to website...");
@@ -290,25 +246,14 @@ async function publishBlog(blog, thumbnailUrl) {
 }
 
 // ============================================================
-// STEP 8 — Post to LinkedIn via Make.com
-// ============================================================
-async function postToLinkedIn(blog, caption, liImage, blogUrl) {
-  if (!MAKE_WEBHOOK_URL || MAKE_WEBHOOK_URL.trim() === "") { console.log("⏭️ Skipping LinkedIn"); return; }
-  console.log("💼 Posting to LinkedIn...");
-  const fetch = (await import("node-fetch")).default;
-  const res = await fetch(MAKE_WEBHOOK_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: blog.title, linkedin_caption: caption, image_url: liImage, blog_url: blogUrl })
-  });
-  console.log(res.ok ? "✅ LinkedIn posted!" : `⚠️ Make.com status: ${res.status}`);
-}
-
-// ============================================================
-// STEP 9 — Vercel rebuild
+// STEP 6 — Trigger Vercel rebuild
 // ============================================================
 async function triggerVercel() {
-  if (!VERCEL_DEPLOY_HOOK || VERCEL_DEPLOY_HOOK.trim() === "") { console.log("⏭️ Skipping Vercel"); return; }
+  if (!VERCEL_DEPLOY_HOOK || VERCEL_DEPLOY_HOOK.trim() === "") {
+    console.log("⏭️ Skipping Vercel rebuild");
+    return;
+  }
+  console.log("🔄 Triggering Vercel rebuild...");
   const fetch = (await import("node-fetch")).default;
   const res = await fetch(VERCEL_DEPLOY_HOOK, { method: "POST" });
   console.log(`✅ Vercel rebuild triggered (${res.status})`);
@@ -326,7 +271,7 @@ async function main() {
   try {
     validateSecrets();
 
-    const { slugs, titles } = await getExistingSlugs();
+    const { titles } = await getExistingSlugs();
     const topicsText = await researchTopics(titles);
 
     console.log("⏳ Waiting 3 minutes (rate limit safety)...");
@@ -335,18 +280,14 @@ async function main() {
     const blog = await writeBlog(topicsText, titles);
     const blogUrl = `https://www.unimakeworks.com/blog/${blog.slug}`;
 
-    const thumbUrl   = await generateThumbnail(blog);
-    const liThumbUrl = await generateLinkedInThumbnail(blog);
-    const liCaption  = await writeLinkedInCaption(blog, blogUrl);
-
+    const thumbUrl = await generateThumbnail(blog);
     await publishBlog(blog, thumbUrl);
-    await postToLinkedIn(blog, liCaption, liThumbUrl, blogUrl);
     await triggerVercel();
 
     console.log("=".repeat(50));
     console.log("🎉 ALL DONE!");
-    console.log(`📝 ${blog.title}`);
-    console.log(`🔗 ${blogUrl}`);
+    console.log(`📝 Title : ${blog.title}`);
+    console.log(`🔗 URL   : ${blogUrl}`);
     console.log("=".repeat(50));
 
   } catch (error) {
