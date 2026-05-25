@@ -1,6 +1,9 @@
+// ============================================================
 // CNC BLOG AGENT — Unimake Works
-// Research → Write → Thumbnail → Publish
-// Buyer Intent Topics + Problem→Solution Format
+// Strategy: Skyscraper SEO — Research top ranking content,
+// write something better. Post 3x/week for quality over quantity.
+// Target: International buyers outside India
+// ============================================================
 
 const CLAUDE_API_KEY     = process.env.CLAUDE_API_KEY;
 const IDEOGRAM_API_KEY   = process.env.IDEOGRAM_API_KEY;
@@ -23,20 +26,29 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
-const DAY_CATEGORIES = {
-  0: "How international buyers can source CNC parts from India — finding suppliers, verifying quality, placing orders",
-  1: "CNC material selection for buyers — aluminium vs steel vs stainless, cost in INR, best choice per application",
-  2: "CNC processes explained simply — VMC milling vs turning vs 4-axis vs 5-axis, which process for which part",
-  3: "Why source CNC parts from India — India vs China cost and quality comparison, delivery to Gulf countries",
-  4: "CNC quality and tolerances — what tolerance means, ISO 9001, CMM inspection, how to avoid wrong parts",
-  5: "CNC part cost and quotation — why parts are expensive, how to reduce cost, DFM tips, getting fast quotes",
-  6: "CNC for specific industries — automotive, aerospace, EV, defense, oil and gas applications from India"
+// Monday=1, Wednesday=3, Friday=5
+const DAY_TOPICS = {
+  1: {
+    focus: "CNC sourcing and supplier selection for international buyers",
+    keywords: ["CNC parts supplier India", "CNC machining company India export", "reliable CNC manufacturer India"],
+    angle: "Problem: Buyers don't know how to find and verify a good Indian CNC supplier"
+  },
+  3: {
+    focus: "CNC cost, materials and design optimization for buyers",
+    keywords: ["CNC machining cost India", "reduce CNC part cost", "CNC material selection guide"],
+    angle: "Problem: Buyers are overpaying or getting wrong material recommendations"
+  },
+  5: {
+    focus: "CNC quality, tolerances and inspection for international orders",
+    keywords: ["CNC part quality India", "CNC tolerance explained", "ISO 9001 CNC manufacturer India"],
+    angle: "Problem: Buyers have received wrong or poor quality CNC parts before"
+  }
 };
 
 const THUMBNAIL_STYLES = [
-  "dark steel CNC workshop, sparks flying, dramatic industrial lighting",
-  "technical blueprint style, orange accents, precision engineering",
-  "macro close-up CNC machined metal parts, studio lighting, quality finish"
+  "dark steel CNC workshop, sparks flying, dramatic industrial lighting, professional photo",
+  "technical blueprint engineering style, orange accents, precision machining India",
+  "macro close-up CNC machined metal parts, studio lighting, high quality finish"
 ];
 
 // ============================================================
@@ -47,7 +59,7 @@ async function getExistingSlugs() {
   try {
     const fetch = (await import("node-fetch")).default;
     const res = await fetch(
-      `${SUPABASE_REST_URL}?select=slug,title&status=eq.published&order=created_at.desc&limit=20`,
+      `${SUPABASE_REST_URL}?select=slug,title&status=eq.published&order=created_at.desc&limit=30`,
       { headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` } }
     );
     const data = await res.json();
@@ -61,40 +73,56 @@ async function getExistingSlugs() {
 }
 
 // ============================================================
-// STEP 2 — Research buyer search topics
+// STEP 2 — Skyscraper Research
+// Find what is already ranking, then plan to beat it
 // ============================================================
-async function researchTopics(existingTitles) {
-  console.log("🔍 Researching buyer search topics...");
+async function skyscraperResearch(existingTitles) {
+  console.log("🔍 Running Skyscraper SEO research...");
   const fetch = (await import("node-fetch")).default;
+
   const today = new Date();
   const day = today.getDay();
-  const category = DAY_CATEGORIES[day];
-  const dayName = DAY_NAMES[day];
+  const topic = DAY_TOPICS[day] || DAY_TOPICS[1];
   const existing = existingTitles.length > 0
-    ? `\nAvoid these already published topics:\n${existingTitles.slice(0,10).join("\n")}`
+    ? `Already published (avoid these topics):\n${existingTitles.slice(0,15).join("\n")}`
     : "";
 
-  const prompt = `Today is ${dayName}. Category: ${category}
+  const prompt = `You are an SEO expert helping Unimake Works rank on Google.
 
-Search Google to find what REAL BUYERS type when they need CNC machined parts from India.
-Focus on purchase-intent searches from Saudi Arabia, UAE, USA, UK buyers.
+TODAY'S FOCUS: ${topic.focus}
+TARGET KEYWORDS: ${topic.keywords.join(", ")}
+BUYER PROBLEM: ${topic.angle}
+
 ${existing}
 
-Return 3 unique blog topic ideas. Each must:
-1. Match actual buyer search queries
-2. Not be covered in existing blogs above
-3. Target international buyers outside India
-4. Lead to Unimake Works as the solution
+DO THIS:
+1. Search Google for the target keywords above
+2. Find what articles are currently ranking on page 1
+3. Analyze what topics they cover and what they MISS
+4. Identify one specific blog topic that:
+   - Matches exactly what buyers search on Google
+   - Has not been covered in existing blogs above
+   - Can be covered BETTER than current ranking articles
+   - Will attract buyers from Saudi Arabia, UAE, USA, UK
 
-Return JSON array only:
-[{"topic":"title","keyword":"main search keyword","buyer_problem":"their problem","unimake_solution":"how Unimake solves it"}]
-Keep each field under 20 words. JSON only. No extra text.`;
+Return JSON only:
+{
+  "chosen_topic": "exact blog title",
+  "primary_keyword": "main keyword to rank for",
+  "secondary_keywords": ["kw2", "kw3", "kw4"],
+  "buyer_search_query": "exact phrase buyer types in Google",
+  "what_ranks_now": "brief description of what currently ranks",
+  "what_we_cover_better": "what our article will cover that others miss",
+  "buyer_problem": "specific problem this buyer has",
+  "word_count_target": 1800
+}
+JSON only. No extra text.`;
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": CLAUDE_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-5", max_tokens: 800,
+      model: "claude-sonnet-4-5", max_tokens: 600,
       tools: [{ type: "web_search_20250305", name: "web_search" }],
       messages: [{ role: "user", content: prompt }]
     })
@@ -104,59 +132,112 @@ Keep each field under 20 words. JSON only. No extra text.`;
   if (!response.ok) throw new Error(`Research error: ${JSON.stringify(data)}`);
   const block = data.content.filter(c => c.type === "text").pop();
   if (!block) throw new Error("No research response");
-  console.log("✅ Topics researched");
-  return block.text;
+
+  let text = block.text.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
+  const s = text.indexOf("{"); const e = text.lastIndexOf("}");
+  if (s === -1 || e === -1) throw new Error("No JSON in research response");
+
+  const research = JSON.parse(text.substring(s, e+1));
+  console.log(`✅ Research done. Topic: "${research.chosen_topic}"`);
+  console.log(`🎯 Keyword: "${research.primary_keyword}"`);
+  console.log(`📊 We cover better: "${research.what_we_cover_better}"`);
+  return research;
 }
 
 // ============================================================
-// STEP 3 — Write blog
+// STEP 3 — Write high quality blog (Skyscraper style)
 // ============================================================
-async function writeBlog(topicsText, existingTitles) {
-  console.log("✍️ Writing blog post...");
+async function writeQualityBlog(research, existingTitles) {
+  console.log("✍️ Writing high quality blog...");
   const fetch = (await import("node-fetch")).default;
   const today = new Date();
   const dateSlug = today.toISOString().slice(0,10);
   const timestamp = today.getTime();
-  const existing = existingTitles.length > 0
-    ? `Do not repeat: ${existingTitles.slice(0,8).join(", ")}`
-    : "";
 
   const prompt = `You are Manish Bandi, Founder of Unimake Works, Hyderabad India.
-10+ years CNC machining experience. ISO 9001:2015 certified.
-Machines: 6 VMC in-house, 30+ VMC, 20+ CNC Turning, 2 fourth-axis, 2 fifth-axis in partner network (60+ total).
-Materials: All metals except Magnesium.
-Clients: All industries worldwide. Mainly Saudi Arabia, UAE, USA, UK buyers.
+You have 10+ years hands-on CNC machining experience on the shop floor.
 
-Topic ideas from research:
-${topicsText}
-${existing}
+COMPANY FACTS (mention naturally — not like advertisement):
+- ISO 9001:2015 certified CNC manufacturer
+- 6 VMC (Vertical Machining Centres) in-house
+- 30+ VMC, 20+ CNC Turning, 2 Fourth-axis, 2 Fifth-axis in partner network
+- Total 60+ machines across network in Hyderabad, India
+- All materials except Magnesium
+- Clients in Saudi Arabia, UAE, USA, UK, Australia
+- Quote response within 6 hours
+- Website: www.unimakeworks.com
 
-Write a blog post for international buyers who need CNC parts from India.
+BLOG ASSIGNMENT:
+Topic: ${research.chosen_topic}
+Primary keyword to rank for: ${research.primary_keyword}
+Secondary keywords: ${research.secondary_keywords.join(", ")}
+Buyer search query: ${research.buyer_search_query}
+Buyer problem: ${research.buyer_problem}
+What we cover better than competitors: ${research.what_we_cover_better}
 
-STRICT RULES:
-- 800 to 1200 words ONLY. Never exceed 1200 words.
-- Simple English. Short paragraphs (3-4 lines max).
-- Every technical term must have bracket explanation.
-  Example: "VMC (Vertical Machining Centre — CNC machine that cuts metal vertically)"
-  Example: "Tolerance (plus or minus 0.01mm — how much size variation is allowed)"
-  Example: "Ra value (surface roughness — Ra 0.8 is very smooth, Ra 3.2 is standard)"
-  Example: "GD&T (Geometric Dimensioning and Tolerancing — international standard for measurements)"
-- Add real practical examples throughout.
-  Example: "For example, a Saudi oil company ordering valve bodies needs..."
-- Structure: Problem Hook → Explanation → Technical Content → Comparison Table → Unimake Solution → CTA
-- Mention Unimake Works 3-4 times naturally.
-- Always mention: ISO 9001:2015, 60+ machines, Hyderabad India, 6-hour quote response.
-- End with CTA: website quote form, email, WhatsApp.
-- Use HEADING: for H2 sections. Use SUBHEADING: for H3. No HTML tags in content.
+WRITE A HIGH QUALITY BLOG FOLLOWING THESE RULES:
 
-Respond with ONLY this JSON object. Start with { and end with }. No text before or after:
-{"title":"...","slug":"keyword-slug-${dateSlug}","meta_title":"under 60 chars","meta_description":"under 155 chars","content":"full blog text","tags":["tag1","tag2","tag3","tag4","tag5"],"thumbnail_prompt":"5 words max"}`;
+QUALITY RULES (Google E-E-A-T):
+1. Open with a real scenario or experience from Unimake Works shop floor
+   Example: "Last month a procurement manager from Riyadh contacted us..."
+   Example: "In our CNC workshop in Hyderabad, we see this mistake often..."
+2. Show REAL expertise — specific numbers, real tolerances, actual prices in INR/USD
+3. Share genuine opinions and recommendations based on experience
+4. Mention real client situations (without naming clients) to show experience
+
+CONTENT RULES:
+- 1600 to 1800 words. Quality over everything.
+- Simple English but with technical terms in brackets always
+  Format: "VMC (Vertical Machining Centre — a CNC machine that cuts metal by moving the cutting tool vertically)"
+  Format: "Ra 1.6 (surface roughness value — means a smooth finish suitable for moving parts)"
+  Format: "Tolerance ±0.02mm (the part can be max 0.02mm bigger or smaller than drawing — very tight)"
+- Short paragraphs — max 4 lines each
+- Real practical examples in every section
+- At least one comparison table with real data
+- Write from first-person experience perspective
+
+STRUCTURE (follow exactly):
+HEADING: [Opening Hook — Real scenario or surprising fact]
+[2-3 paragraphs setting up the buyer problem with real example]
+
+HEADING: [Main problem explained in depth]
+[Technical content with bracket explanations and examples]
+
+HEADING: [Key factor 1 buyers must know]
+[Detailed practical information]
+
+SUBHEADING: [Sub point]
+[Content]
+
+HEADING: [Key factor 2 buyers must know]
+[Comparison table here]
+
+HEADING: [Key factor 3 buyers must know]
+[More practical content]
+
+HEADING: Frequently Asked Questions
+[4-5 FAQs that buyers actually ask — with detailed answers]
+
+HEADING: How Unimake Works Solves This
+[2-3 paragraphs naturally explaining Unimake Works solution]
+[Mention ISO 9001, machines, location, response time naturally]
+
+[End with CTA]
+
+SEO RULES:
+- Use primary keyword naturally in first paragraph
+- Use primary keyword in at least 2 headings
+- Use secondary keywords naturally throughout
+- FAQ section helps rank for featured snippets on Google
+
+Respond with ONLY this JSON. Start with { end with }:
+{"title":"...","slug":"primary-keyword-slug-${dateSlug}","meta_title":"under 60 chars with keyword","meta_description":"under 155 chars, mention India CNC benefit","content":"full blog with HEADING: and SUBHEADING: markers, no HTML","tags":["tag1","tag2","tag3","tag4","tag5"],"thumbnail_prompt":"5 words max visual"}`;
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": CLAUDE_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-5", max_tokens: 4000,
+      model: "claude-sonnet-4-5", max_tokens: 5000,
       messages: [{ role: "user", content: prompt }]
     })
   });
@@ -169,28 +250,40 @@ Respond with ONLY this JSON object. Start with { and end with }. No text before 
   let text = block.text.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
   console.log("Claude preview:", text.substring(0,150));
 
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1) {
-    console.log("Full response:", text);
-    throw new Error("No JSON found in Claude response");
+  const s = text.indexOf("{"); const e = text.lastIndexOf("}");
+  if (s === -1 || e === -1) {
+    console.log("Full Claude response:", text.substring(0,500));
+    throw new Error("No JSON found in Claude blog response");
   }
 
-  const blog = JSON.parse(text.substring(start, end+1));
+  const blog = JSON.parse(text.substring(s, e+1));
   blog.slug = `${blog.slug}-${timestamp}`;
 
+  // Convert plain text to HTML with proper structure
   const lines = blog.content.split("\n").filter(l => l.trim());
   let html = "";
   for (const line of lines) {
     const t = line.trim();
-    if (t.startsWith("HEADING:")) html += `<h2>${t.replace("HEADING:","").trim()}</h2>\n`;
-    else if (t.startsWith("SUBHEADING:")) html += `<h3>${t.replace("SUBHEADING:","").trim()}</h3>\n`;
-    else if (t.length > 0) html += `<p>${t}</p>\n`;
+    if (t.startsWith("HEADING:")) {
+      html += `<h2>${t.replace("HEADING:","").trim()}</h2>\n`;
+    } else if (t.startsWith("SUBHEADING:")) {
+      html += `<h3>${t.replace("SUBHEADING:","").trim()}</h3>\n`;
+    } else if (t.startsWith("|")) {
+      html += `<p style="font-family:monospace">${t}</p>\n`;
+    } else if (t.length > 0) {
+      html += `<p>${t}</p>\n`;
+    }
   }
 
-  html += `<h2>Ready to Get Your CNC Parts from India?</h2>
-<p>Unimake Works manufactures precision CNC parts for buyers across Saudi Arabia, UAE, USA and UK. ISO 9001:2015 certified. 60+ machines. 6-hour quote response from Hyderabad, India.</p>
-<p>✅ <a href="https://www.unimakeworks.com/request-quote">Request Quote Online</a><br/>✅ Email us your drawings<br/>✅ WhatsApp for quick response</p>`;
+  // Strong CTA at end
+  html += `
+<h2>Get a Quote from Unimake Works in 6 Hours</h2>
+<p>We manufacture precision CNC parts for buyers across Saudi Arabia, UAE, USA, UK and Australia. ISO 9001:2015 certified. 60+ machines across our network in Hyderabad, India. Send us your drawings and get a detailed quote within 6 hours.</p>
+<p>
+✅ <a href="https://www.unimakeworks.com/request-quote"><strong>Request Quote Online — Free</strong></a><br/>
+✅ Email your drawings directly<br/>
+✅ WhatsApp for quick questions
+</p>`;
 
   blog.content = html;
   console.log(`✅ Blog written: "${blog.title}"`);
@@ -209,7 +302,7 @@ async function generateThumbnail(blog) {
     headers: { "Api-Key": IDEOGRAM_API_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({
       image_request: {
-        prompt: `${blog.thumbnail_prompt}, ${style}, 1200x630px professional`,
+        prompt: `${blog.thumbnail_prompt}, ${style}, 1200x630px`,
         aspect_ratio: "ASPECT_16_9", model: "V_2", magic_prompt_option: "AUTO"
       }
     })
@@ -238,8 +331,8 @@ async function publishBlog(blog, thumbnailUrl) {
       published_at: now, created_at: now
     })
   });
-  const text = await res.text();
-  let data; try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  const resText = await res.text();
+  let data; try { data = JSON.parse(resText); } catch { data = { raw: resText }; }
   if (!res.ok) throw new Error(`Publish error (${res.status}): ${JSON.stringify(data)}`);
   console.log("✅ Blog published!");
   return data;
@@ -253,7 +346,6 @@ async function triggerVercel() {
     console.log("⏭️ Skipping Vercel rebuild");
     return;
   }
-  console.log("🔄 Triggering Vercel rebuild...");
   const fetch = (await import("node-fetch")).default;
   const res = await fetch(VERCEL_DEPLOY_HOOK, { method: "POST" });
   console.log(`✅ Vercel rebuild triggered (${res.status})`);
@@ -263,32 +355,44 @@ async function triggerVercel() {
 // MAIN
 // ============================================================
 async function main() {
-  console.log("\n🚀 CNC Blog Agent — Unimake Works");
-  console.log("=".repeat(50));
+  console.log("\n🚀 CNC Blog Agent — Unimake Works (Quality Edition)");
+  console.log("=".repeat(55));
   console.log(`📅 ${new Date().toUTCString()}`);
-  console.log(`🌍 Target: International CNC buyers`);
+  console.log(`🎯 Strategy: Skyscraper SEO — Quality over Quantity`);
+  console.log(`🌍 Target: International CNC buyers (Saudi, UAE, USA, UK)`);
 
   try {
     validateSecrets();
 
     const { titles } = await getExistingSlugs();
-    const topicsText = await researchTopics(titles);
 
-    console.log("⏳ Waiting 3 minutes (rate limit safety)...");
+    // Step 1: Skyscraper research
+    const research = await skyscraperResearch(titles);
+
+    // Step 2: Wait 5 minutes for rate limit reset
+    console.log("⏳ Waiting 5 minutes (rate limit safety)...");
     await sleep(300000);
 
-    const blog = await writeBlog(topicsText, titles);
+    // Step 3: Write high quality blog
+    const blog = await writeQualityBlog(research, titles);
     const blogUrl = `https://www.unimakeworks.com/blog/${blog.slug}`;
 
+    // Step 4: Generate thumbnail
     const thumbUrl = await generateThumbnail(blog);
+
+    // Step 5: Publish
     await publishBlog(blog, thumbUrl);
+
+    // Step 6: Vercel rebuild
     await triggerVercel();
 
-    console.log("=".repeat(50));
-    console.log("🎉 ALL DONE!");
-    console.log(`📝 Title : ${blog.title}`);
-    console.log(`🔗 URL   : ${blogUrl}`);
-    console.log("=".repeat(50));
+    console.log("=".repeat(55));
+    console.log("🎉 HIGH QUALITY BLOG PUBLISHED!");
+    console.log(`📝 Title   : ${blog.title}`);
+    console.log(`🔑 Keyword : ${research.primary_keyword}`);
+    console.log(`🔗 URL     : ${blogUrl}`);
+    console.log(`📊 Better than competitors: ${research.what_we_cover_better}`);
+    console.log("=".repeat(55));
 
   } catch (error) {
     console.error("\n❌ ERROR:", error.message);
