@@ -88,7 +88,7 @@ Return 3 unique blog topic ideas. Each must:
 
 Return JSON array only:
 [{"topic":"title","keyword":"main search keyword","buyer_problem":"their problem","unimake_solution":"how Unimake solves it"}]
-JSON only. No extra text.`;
+Keep each field under 20 words. JSON only. No extra text.`;
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -275,7 +275,7 @@ async function main() {
     const topicsText = await researchTopics(titles);
 
     console.log("⏳ Waiting 3 minutes (rate limit safety)...");
-    await sleep(180000);
+    await sleep(300000);
 
     const blog = await writeBlog(topicsText, titles);
     const blogUrl = `https://www.unimakeworks.com/blog/${blog.slug}`;
